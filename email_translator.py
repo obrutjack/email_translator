@@ -166,7 +166,7 @@ class EmailTranslator:
         return content    
 
     def translate_to_chinese(self, text):
-        """將英文翻譯成繁體中文 - 使用免費翻譯API"""
+        """自動偵測語言並翻譯成繁體中文 - 使用免費翻譯API"""
         if len(text) > 1000:
             return self.translate_long_text(text)
         
@@ -333,7 +333,7 @@ class EmailTranslator:
 
     
     def translate_with_google_free(self, text):
-        """使用Google翻譯免費版（透過googletrans套件）"""
+        """使用Google翻譯免費版（透過googletrans套件）- 支援自動語言偵測"""
         try:
             from googletrans import Translator
             translator = Translator()
@@ -341,8 +341,20 @@ class EmailTranslator:
             # 清理文本並提取連結
             cleaned_text, links, image_links = self.clean_text_for_translation(text)
             
-            # 執行翻譯
-            result = translator.translate(cleaned_text, src='en', dest='zh-tw')
+            # 自動偵測語言
+            detected = translator.detect(cleaned_text)
+            detected_lang = detected.lang
+            confidence = detected.confidence if detected.confidence is not None else 0.0
+            
+            print(f"🔍 偵測到語言: {detected_lang} (信心度: {confidence:.2f})")
+            
+            # 如果已經是繁體中文，直接返回
+            if detected_lang == 'zh-tw' or detected_lang == 'zh':
+                print("✅ 文本已經是中文，無需翻譯")
+                return text
+            
+            # 執行翻譯 - 自動偵測來源語言
+            result = translator.translate(cleaned_text, src='auto', dest='zh-tw')
             
             # 確保返回的是繁體中文
             translated_text = result.text
@@ -351,7 +363,7 @@ class EmailTranslator:
             if self.contains_invalid_chars(translated_text):
                 print("⚠️ 翻譯結果包含異常字符，嘗試重新翻譯...")
                 # 嘗試使用簡體中文再轉換
-                result_cn = translator.translate(cleaned_text, src='en', dest='zh-cn')
+                result_cn = translator.translate(cleaned_text, src='auto', dest='zh-cn')
                 # 將簡體轉繁體
                 result_tw = translator.translate(result_cn.text, src='zh-cn', dest='zh-tw')
                 translated_text = result_tw.text
@@ -369,27 +381,47 @@ class EmailTranslator:
 
     def clean_text_for_translation(self, text):
         """清理文本以改善翻譯品質"""
-        # 提取並分類連結
+        # 提取並分類連結，避免重複
         links = []
         image_links = []
+        seen_links = set()  # 用於追蹤已見過的連結
+        seen_images = set()  # 用於追蹤已見過的圖片
         
         # 圖檔連結模式（包含常見圖檔格式）
         image_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+\.(?:jpg|jpeg|png|gif|bmp|webp|svg)(?:\?[^\s<>"{}|\\^`\[\]]*)?'
         
-        # 一般連結模式
-        general_link_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+[^\s<>"{}|\\^`\[\].,;!?]'
+        # 一般連結模式 - 更寬鬆的匹配
+        general_link_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+(?:[^\s<>"{}|\\^`\[\].,;!?\)\]]|[.,;!?](?!\s))*'
         
         def replace_image_link(match):
             link = match.group(0)
-            image_links.append(link)
-            return f' [IMAGE_{len(image_links)-1}] '
+            if link not in seen_images:
+                seen_images.add(link)
+                image_links.append(link)
+                return f' [IMAGE_{len(image_links)-1}] '
+            else:
+                # 如果是重複的圖片連結，找到它的索引
+                try:
+                    index = image_links.index(link)
+                    return f' [IMAGE_{index}] '
+                except ValueError:
+                    return f' [IMAGE_{len(image_links)-1}] '
         
         def replace_general_link(match):
             link = match.group(0)
             # 檢查是否已經是圖檔連結
             if not re.match(image_pattern, link):
-                links.append(link)
-                return f' [LINK_{len(links)-1}] '
+                if link not in seen_links:
+                    seen_links.add(link)
+                    links.append(link)
+                    return f' [LINK_{len(links)-1}] '
+                else:
+                    # 如果是重複的連結，找到它的索引
+                    try:
+                        index = links.index(link)
+                        return f' [LINK_{index}] '
+                    except ValueError:
+                        return f' [LINK_{len(links)-1}] '
             return match.group(0)  # 保持圖檔連結不變
         
         # 先處理圖檔連結
@@ -424,24 +456,116 @@ class EmailTranslator:
         return False
     
     def restore_links_in_translation(self, translated_text, links, image_links=None):
-        """在翻譯結果中恢復連結並格式化"""
-        # 移除翻譯結果中的連結佔位符
-        cleaned_translation = re.sub(r'\[LINK_\d+\]', '', translated_text)
-        cleaned_translation = re.sub(r'\[IMAGE_\d+\]', '', cleaned_translation)
-        cleaned_translation = re.sub(r'\s+', ' ', cleaned_translation.strip())
+        """在翻譯結果中恢復連結並格式化 - 只顯示實際被引用的連結"""
+        result = translated_text
+        used_links = []  # 記錄實際被使用的連結
+        used_images = []  # 記錄實際被使用的圖片
+        link_mapping = {}  # 記錄原始索引到新索引的映射
         
-        result = cleaned_translation
+        # 先掃描文本，找出實際存在的連結引用
+        import re
         
-        # 添加圖檔連結（如果有的話）
+        # 尋找所有可能的連結引用格式
+        link_patterns = [
+            r'\[LINK_(\d+)\]',
+            r'\[link_(\d+)\]', 
+            r'\[Link_(\d+)\]',
+            r'\(連結\s*(\d+)\)',
+            r'（連結\s*(\d+)）',
+            r'\[連結(\d+)\]',
+            r'\(連結(\d+)\)',
+            r'（連結(\d+)）'
+        ]
+        
+        found_link_indices = set()
+        for pattern in link_patterns:
+            matches = re.findall(pattern, result)
+            for match in matches:
+                try:
+                    # 將字符串轉換為整數，並調整為0基索引
+                    original_index = int(match) - 1 if pattern.startswith(r'\[連結') or '連結' in pattern else int(match)
+                    if 0 <= original_index < len(links):
+                        found_link_indices.add(original_index)
+                except (ValueError, IndexError):
+                    continue
+        
+        # 對找到的索引進行排序
+        sorted_indices = sorted(found_link_indices)
+        
+        # 建立映射關係
+        for new_index, original_index in enumerate(sorted_indices):
+            link_mapping[original_index] = new_index + 1
+            used_links.append(links[original_index])
+        
+        # 處理圖片連結佔位符
         if image_links:
+            image_patterns = [
+                r'\[IMAGE_(\d+)\]',
+                r'\[image_(\d+)\]',
+                r'\[Image_(\d+)\]'
+            ]
+            
+            found_image_indices = set()
+            for pattern in image_patterns:
+                matches = re.findall(pattern, result)
+                for match in matches:
+                    try:
+                        original_index = int(match)
+                        if 0 <= original_index < len(image_links):
+                            found_image_indices.add(original_index)
+                    except (ValueError, IndexError):
+                        continue
+            
+            sorted_image_indices = sorted(found_image_indices)
+            for new_index, original_index in enumerate(sorted_image_indices):
+                used_images.append(image_links[original_index])
+                
+                # 替換圖片佔位符
+                placeholders = [
+                    f'[IMAGE_{original_index}]',
+                    f'[image_{original_index}]',
+                    f'[Image_{original_index}]'
+                ]
+                reference = f'[圖片{new_index + 1}]'
+                
+                for placeholder in placeholders:
+                    if placeholder in result:
+                        result = result.replace(placeholder, reference)
+                        break
+        
+        # 替換連結佔位符
+        for original_index, new_index in link_mapping.items():
+            # 所有可能的佔位符格式
+            placeholders = [
+                f'[LINK_{original_index}]',
+                f'[link_{original_index}]',
+                f'[Link_{original_index}]',
+                f'(連結 {original_index + 1})',
+                f'（連結 {original_index + 1}）',
+                f'[連結{original_index + 1}]',
+                f'(連結{original_index + 1})',
+                f'（連結{original_index + 1}）'
+            ]
+            
+            reference = f'[連結{new_index}]'
+            
+            for placeholder in placeholders:
+                if placeholder in result:
+                    result = result.replace(placeholder, reference)
+        
+        # 清理多餘空格
+        result = re.sub(r'\s+', ' ', result.strip())
+        
+        # 只添加實際被使用的圖檔連結
+        if used_images:
             result += "\n\n### 🖼️ 圖片連結\n\n"
-            for i, image_link in enumerate(image_links, 1):
+            for i, image_link in enumerate(used_images, 1):
                 result += f"{i}. ![圖片{i}]({image_link})\n"
         
-        # 添加一般連結（如果有的話）
-        if links:
+        # 只添加實際被使用的一般連結
+        if used_links:
             result += "\n\n### 📎 相關連結\n\n"
-            for i, link in enumerate(links, 1):
+            for i, link in enumerate(used_links, 1):
                 result += f"{i}. {link}\n"
         
         return result
@@ -550,6 +674,27 @@ class EmailTranslator:
             # 4. 翻譯內容
             print("🔄 正在翻譯...")
             translated_content = self.translate_to_chinese(email_data['content'])
+            
+            # 5. 校對與潤飾翻譯
+            print("📝 正在校對翻譯...")
+            try:
+                from translation_proofreader import TranslationProofreader
+                proofreader = TranslationProofreader()
+                proofread_result = proofreader.enhance_translation_quality(
+                    email_data['content'], translated_content
+                )
+                translated_content = proofread_result['proofread']
+                
+                if proofread_result['improvements']:
+                    print(f"✅ 翻譯校對完成，改進了 {len(proofread_result['improvements'])} 個地方")
+                    for improvement in proofread_result['improvements'][:3]:  # 只顯示前3個改進
+                        print(f"   - {improvement}")
+                else:
+                    print("✅ 翻譯品質良好，無需校對")
+            except ImportError:
+                print("⚠️ 校對模組未找到，跳過校對步驟")
+            except Exception as e:
+                print(f"⚠️ 校對過程出錯，使用原翻譯: {e}")
             
             # 5. 建立Markdown檔案
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

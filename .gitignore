@@ -7,6 +7,9 @@ env/
 credentials.json
 token.pickle
 
+# Google Gemini API Key (敏感資訊)
+gemini_apikey.json
+
 # 配置檔案 (包含敏感資訊)
 config.json
 

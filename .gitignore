@@ -1,0 +1,44 @@
+# 虛擬環境
+.venv/
+venv/
+env/
+
+# Google OAuth認證檔案 (敏感資訊)
+credentials.json
+token.pickle
+
+# 配置檔案 (包含敏感資訊)
+config.json
+
+# 程式產出檔案
+*.pdf
+email_translation_*.md
+
+# Python快取檔案
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+
+# IDE設定檔案
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日誌檔案
+*.log
+
+# 暫存檔案
+*.tmp
+*.temp
+
+# 字體檔案 (可選)
+*.ttc
+*.ttf
+*.otf

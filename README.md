@@ -4,8 +4,8 @@
 
 ## ✨ 功能特色
 
-- 🔐 **安全的Gmail OAuth 2.0認證** - 符合Google最新安全標準
-- 🔄 **Google翻譯免費版** - 高品質繁體中文翻譯
+- 🔐 **安全的Gmail認證** - 符合Google安全標準
+- 🔄 **高品質繁體中文翻譯** - 準確流暢的翻譯結果
 - 📝 **Markdown報告生成** - 完美支援中文顯示，包含翻譯內容
 - 📱 **Telegram自動傳送** - 即時接收翻譯結果
 - 🔍 **智能郵件搜尋** - 支援主旨、寄件者、日期篩選
@@ -23,12 +23,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Google Cloud設定
+### 2. Gmail認證設定
 按照 `gmail_oauth_setup.md` 的詳細步驟：
-1. 建立Google Cloud專案
-2. 啟用Gmail API
-3. 設定OAuth同意畫面
-4. 下載 `credentials.json` 檔案
+1. 設定Gmail存取權限
+2. 完成必要的認證步驟
+3. 儲存認證資訊
 
 ### 3. Telegram Bot設定
 1. 在Telegram中找 @BotFather 建立機器人
@@ -80,11 +79,10 @@ python config_manager.py
 
 ## 🔄 翻譯服務
 
-### Google翻譯免費版
-- 高品質翻譯結果
-- 支援繁體中文
-- 穩定可靠的服務
-- 無需額外API金鑰
+### 高品質翻譯
+- 準確流暢的繁體中文翻譯
+- 支援專業術語和複雜句型
+- 穩定可靠的翻譯服務
 - 智能文本清理和連結處理
 
 ### 翻譯優化特色
@@ -151,8 +149,8 @@ email_translator/
 ├── config.json                  # 實際配置檔案
 ├── config.json.example          # 配置範例檔案
 ├── requirements.txt             # 套件清單
-├── credentials.json            # Google OAuth認證檔案 (需下載)
-├── token.pickle               # 自動生成的認證token
+├── credentials.json            # Gmail認證檔案
+├── token.pickle               # 認證token
 ├── gmail_oauth_setup.md       # Gmail設定詳細指南
 ├── setup_guide.md            # 完整設定指南
 ├── config_usage_guide.md     # 配置使用指南
@@ -178,11 +176,11 @@ email_translator/
 
 ## 🔒 安全性
 
-- 使用OAuth 2.0認證，不需要Gmail密碼
-- 只要求Gmail「只讀」權限
+- 安全的Gmail存取機制
+- 只要求郵件「讀取」權限
 - 敏感檔案已加入 `.gitignore`
-- 支援測試使用者限制
-- 配置檔案本地加密儲存
+- 支援使用者權限控制
+- 配置檔案本地儲存
 
 ## 📋 系統需求
 
@@ -195,8 +193,8 @@ email_translator/
 ## 🆘 故障排除
 
 ### 常見問題
-1. **找不到credentials.json** - 請從Google Cloud Console下載
-2. **OAuth認證失敗** - 檢查OAuth同意畫面設定和測試使用者
+1. **認證檔案缺失** - 請參考設定指南完成認證
+2. **Gmail認證失敗** - 檢查認證設定和使用者權限
 3. **翻譯速度慢** - 檢查網路連線，程式會自動優化
 4. **Telegram傳送失敗** - 檢查Bot Token和Chat ID設定
 5. **中文顯示問題** - Markdown格式完美支援中文，無需額外設定
@@ -214,7 +212,7 @@ python config_manager.py
 ```
 
 ### 取得協助
-- 📖 `gmail_oauth_setup.md` - Google設定詳細步驟
+- 📖 `gmail_oauth_setup.md` - Gmail認證設定步驟
 - 📋 `setup_guide.md` - 完整設定流程
 - ⚙️ `config_usage_guide.md` - 配置管理說明
 
@@ -241,12 +239,12 @@ python email_translator.py tech_news
 ## 📄 授權
 
 此專案僅供個人學習和使用。請遵守相關服務的使用條款：
-- Google Gmail API 使用條款
+- Gmail 使用條款
 - Telegram Bot API 使用條款
-- Google翻譯服務條款
+- 相關翻譯服務條款
 
 ---
 
 🎉 **享受高效的自動化郵件翻譯體驗！**
 
-*最後更新: 2025-01-16*
+*最後更新: 2025-07-17*

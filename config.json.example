@@ -1,0 +1,32 @@
+{
+  "telegram": {
+    "bot_token": "[your_bot_token]",
+    "chat_id": "[your_chat_id]"
+  },
+  "translation": {
+    "deepl_api_key": "",
+    "target_language": "zh-TW"
+  },
+  "email_search": {
+    "default_criteria": {
+      "subject": "[email_subject_keyword]",
+      "sender": "[sender_email]",
+      "date_after": ""
+    },
+    "saved_searches": {
+      "work_reports": {
+        "subject": "weekly report",
+        "sender": "boss@company.com",
+        "date_after": "2024/12/01"
+      },
+      "invoices": {
+        "subject": "invoice",
+        "sender": "billing@company.com"
+      },
+      "newsletters": {
+        "sender": "newsletter@example.com",
+        "date_after": "2024/12/01"
+      }
+    }
+  }
+}

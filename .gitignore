@@ -11,7 +11,6 @@ token.pickle
 config.json
 
 # 程式產出檔案
-*.pdf
 email_translation_*.md
 
 # Python快取檔案
@@ -37,8 +36,3 @@ Thumbs.db
 # 暫存檔案
 *.tmp
 *.temp
-
-# 字體檔案 (可選)
-*.ttc
-*.ttf
-*.otf

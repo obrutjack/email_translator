@@ -469,12 +469,7 @@ class EmailTranslator:
         link_patterns = [
             r'\[LINK_(\d+)\]',
             r'\[link_(\d+)\]', 
-            r'\[Link_(\d+)\]',
-            r'\(連結\s*(\d+)\)',
-            r'（連結\s*(\d+)）',
-            r'\[連結(\d+)\]',
-            r'\(連結(\d+)\)',
-            r'（連結(\d+)）'
+            r'\[Link_(\d+)\]'
         ]
         
         found_link_indices = set()
@@ -482,8 +477,8 @@ class EmailTranslator:
             matches = re.findall(pattern, result)
             for match in matches:
                 try:
-                    # 將字符串轉換為整數，並調整為0基索引
-                    original_index = int(match) - 1 if pattern.startswith(r'\[連結') or '連結' in pattern else int(match)
+                    # LINK_ 格式使用0基索引
+                    original_index = int(match)
                     if 0 <= original_index < len(links):
                         found_link_indices.add(original_index)
                 except (ValueError, IndexError):
